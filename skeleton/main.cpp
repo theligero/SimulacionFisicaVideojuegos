@@ -13,6 +13,7 @@
 
 std::string display_text = "This is a test";
 
+const float damping = 0.9995f;
 
 using namespace physx;
 
@@ -58,7 +59,8 @@ void initPhysics(bool interactive)
 	sceneDesc.simulationEventCallback = &gContactReportCallback;
 	gScene = gPhysics->createScene(sceneDesc);
 
-	particle = new Particle({ 0.0, 0.0, 0.0 }, { 0.0, 15.0, 0.0 });
+	particle = new Particle({ 0.0, 0.0, 0.0 }, {1.0, 0.5, 6.0},
+		{ 0.0, 1.0, 0.5 }, damping);
 
 	}
 
@@ -73,7 +75,7 @@ void stepPhysics(bool interactive, double t)
 	gScene->simulate(t);
 	gScene->fetchResults(true);
 
-	particle->update(t);
+	particle->integrate(t);
 }
 
 // Function to clean data

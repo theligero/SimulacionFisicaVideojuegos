@@ -3,18 +3,20 @@
 
 #include "RenderUtils.hpp"
 
-using namespace physx;
-
 class Particle
 {
 private:
-	PxTransform pos;
+	physx::PxTransform pos;
 	Vector3 vel;
 	RenderItem* renderItem;
+
+	Vector3 accel;
+	float damping;
 public:
-	Particle(Vector3 _pos, Vector3 _vel);
+	Particle(Vector3 _pos, Vector3 _vel, Vector3 _accel, float d);
 	~Particle();
-	void update(double t);
+
+	void integrate(double t);
 };
 
 #endif /*PARTICLE_H_*/
