@@ -8,12 +8,14 @@
 #include "RenderUtils.hpp"
 #include "callbacks.hpp"
 #include "Particle.h"
+#include "SceneManager.h"
 
 #include <iostream>
 
 std::string display_text = "This is a test";
 
 const float damping = 0.9995f;
+Vector3 gravity = { 0.0f, -9.8f, 0.0f };
 
 using namespace physx;
 
@@ -33,6 +35,7 @@ PxScene*				gScene      = NULL;
 ContactReportCallback gContactReportCallback;
 
 Particle* particle;
+SceneManager* sceneManager;
 
 
 // Initialize physics engine
@@ -59,8 +62,8 @@ void initPhysics(bool interactive)
 	sceneDesc.simulationEventCallback = &gContactReportCallback;
 	gScene = gPhysics->createScene(sceneDesc);
 
-	particle = new Particle({ 0.0, 0.0, 0.0 }, {1.0, 0.5, 6.0},
-		{ 0.0, 1.0, 0.5 }, damping);
+	particle = new Particle(GetCamera()->getTransform(), {15.0, 0.0, 0.0}, gravity, damping, 100);
+	sceneManager = new SceneManager(GetCamera(), 10);
 
 	}
 
@@ -76,6 +79,7 @@ void stepPhysics(bool interactive, double t)
 	gScene->fetchResults(true);
 
 	particle->integrate(t);
+	sceneManager->update(t);
 }
 
 // Function to clean data
@@ -96,6 +100,7 @@ void cleanupPhysics(bool interactive)
 	gFoundation->release();
 
 	delete particle;
+	delete sceneManager;
 	}
 
 // Function called when a key is pressed
@@ -109,8 +114,9 @@ void keyPress(unsigned char key, const PxTransform& camera)
 	//case ' ':	break;
 	case ' ':
 	{
+		sceneManager->addProjectile();
 		break;
-	}
+	} 
 	default:
 		break;
 	}
