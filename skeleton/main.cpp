@@ -62,7 +62,7 @@ void initPhysics(bool interactive)
 	sceneDesc.simulationEventCallback = &gContactReportCallback;
 	gScene = gPhysics->createScene(sceneDesc);
 
-	particle = new Particle(GetCamera()->getTransform(), {15.0, 0.0, 0.0}, gravity, damping, 100);
+	particle = new Particle(GetCamera()->getTransform(), {15.0, 0.0, 0.0}, gravity, { 0, 0, 0.5, 1.0 }, damping, 100);
 	sceneManager = new SceneManager(GetCamera(), 10);
 
 	}
@@ -112,11 +112,26 @@ void keyPress(unsigned char key, const PxTransform& camera)
 	{
 	//case 'B': break;
 	//case ' ':	break;
-	case ' ':
+	case '1':
 	{
-		sceneManager->addProjectile();
+		sceneManager->addProjectile(typeOfParticle::BULLET);
 		break;
-	} 
+	}
+	case '2':
+	{
+		sceneManager->addProjectile(typeOfParticle::CANNON);
+		break;
+	}
+	case '3':
+	{
+		sceneManager->addProjectile(typeOfParticle::MISSILE);
+		break;
+	}
+	case '4':
+	{
+		// sceneManager->addProjectile();
+		break;
+	}
 	default:
 		break;
 	}

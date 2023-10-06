@@ -1,14 +1,15 @@
 #include "Particle.h"
 #include <iostream>
 
-Particle::Particle(PxTransform _tr, Vector3 _vel, Vector3 _accel, float d, float m)
+Particle::Particle(PxTransform _tr, Vector3 _vel, Vector3 _accel, Vector4 _color, float d, float m)
 {
 	tr = _tr;
+	color = _color;
 	accel = _accel;
 	vel = _vel;
 	damping = d;
 	inv_mass = 1.0f / m;
-	renderItem = new RenderItem(CreateShape(PxSphereGeometry(1.5)), &tr, { 0, 0, 0.5, 1.0 });
+	renderItem = new RenderItem(CreateShape(PxSphereGeometry(1.5)), &tr, color);
 }
 
 Particle::~Particle()
@@ -26,8 +27,6 @@ void Particle::integrate(double t)
 	vel += accel * t;
 
 	vel *= powf(damping, t);
-
-	// std::cout << vel.x << ", " << vel.y << ", " << vel.z << std::endl;
 }
 
 void Particle::setMass(float m)

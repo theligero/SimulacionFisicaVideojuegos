@@ -5,6 +5,10 @@
 #include "Particle.h"
 #include "Render/Camera.h"
 
+const float damping = 0.9995f;
+
+enum typeOfParticle { BULLET, CANNON, MISSILE };
+
 class SceneManager
 {
 private:
@@ -16,7 +20,7 @@ public:
 	~SceneManager();
 
 	void update(double t);
-	void addProjectile();
+	void addProjectile(typeOfParticle type);
 };
 
 #endif SCENE_MANAGER_H_

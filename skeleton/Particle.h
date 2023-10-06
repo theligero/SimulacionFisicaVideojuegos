@@ -16,8 +16,9 @@ private:
 	float damping;
 
 	float inv_mass;
+	Vector4 color;
 public:
-	Particle(PxTransform _tr, Vector3 _vel, Vector3 _accel, float d, float m);
+	Particle(PxTransform _tr, Vector3 _vel, Vector3 _accel, Vector4 _color, float d, float m);
 	~Particle();
 
 	void integrate(double t);
