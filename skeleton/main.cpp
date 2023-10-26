@@ -9,13 +9,14 @@
 #include "callbacks.hpp"
 #include "Particle.h"
 #include "SceneManager.h"
+#include "ParticleSystem.h"
 
 #include <iostream>
 
 std::string display_text = "This is a test";
 
-const float damping = 0.9995f;
 Vector3 gravity = { 0.0f, -9.8f, 0.0f };
+int MAX_PARTICLES = 10;
 
 using namespace physx;
 
@@ -36,6 +37,7 @@ ContactReportCallback gContactReportCallback;
 
 Particle* particle;
 SceneManager* sceneManager;
+ParticleSystem* particleSystem;
 
 
 // Initialize physics engine
@@ -63,8 +65,8 @@ void initPhysics(bool interactive)
 	gScene = gPhysics->createScene(sceneDesc);
 
 	particle = new Particle(GetCamera()->getTransform(), {15.0, 0.0, 0.0}, gravity, { 0, 0, 0.5, 1.0 }, damping, 100);
-	sceneManager = new SceneManager(GetCamera(), 10);
-
+	sceneManager = new SceneManager(GetCamera(), MAX_PARTICLES);
+	particleSystem = new ParticleSystem();
 	}
 
 
