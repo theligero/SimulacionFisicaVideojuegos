@@ -30,6 +30,21 @@ PxDefaultCpuDispatcher*	gDispatcher = NULL;
 PxScene*				gScene      = NULL;
 ContactReportCallback gContactReportCallback;
 
+// Shapes
+static physx::PxShape* gSphereShape = nullptr;
+
+// Transforms (vida larga para que el renderer los lea cada frame)
+static physx::PxTransform gSphereTr{ physx::PxVec3(0.f, 0.f, 0.f) };
+static physx::PxTransform gSphereXTr{ physx::PxVec3(10.f, 0.f, 0.f) };
+static physx::PxTransform gSphereYTr{ physx::PxVec3(0.f, 10.f, 0.f) };
+static physx::PxTransform gSphereZTr{ physx::PxVec3(0.f, 0.f, 10.f) };
+
+// RenderItems (para poder deregistrar en cleanup)
+static RenderItem* gSphereItem = nullptr;
+static RenderItem* gSphereXItem = nullptr;
+static RenderItem* gSphereYItem = nullptr;
+static RenderItem* gSphereZItem = nullptr;
+
 
 // Initialize physics engine
 void initPhysics(bool interactive)
@@ -54,7 +69,23 @@ void initPhysics(bool interactive)
 	sceneDesc.filterShader = contactReportFilterShader;
 	sceneDesc.simulationEventCallback = &gContactReportCallback;
 	gScene = gPhysics->createScene(sceneDesc);
-	}
+
+	// ====== P0: CREACIÓN Y REGISTRO DE GEOMETRÍAS ======
+
+	// Esfera central (radio 1.0)
+	gSphereShape = CreateShape(physx::PxSphereGeometry(1.0f), gMaterial);
+	gSphereItem = new RenderItem(gSphereShape, &gSphereTr, Vector4(1, 1, 1, 1));
+	RegisterRenderItem(gSphereItem);
+
+	gSphereXItem = new RenderItem(gSphereShape, &gSphereXTr, Vector4(1, 0, 0, 1)); // rojo
+	RegisterRenderItem(gSphereXItem);
+
+	gSphereYItem = new RenderItem(gSphereShape, &gSphereYTr, Vector4(0, 1, 0, 1)); // verde
+	RegisterRenderItem(gSphereYItem);
+
+	gSphereZItem = new RenderItem(gSphereShape, &gSphereZTr, Vector4(0, 0, 1, 1)); // azul
+	RegisterRenderItem(gSphereZItem);
+}
 
 
 // Function to configure what happens in each step of physics
@@ -72,6 +103,14 @@ void stepPhysics(bool interactive, double t)
 // Add custom code to the begining of the function
 void cleanupPhysics(bool interactive)
 {
+	// ====== P0: DESREGISTRO Y LIBERACIÓN ======
+	if (gSphereItem) { DeregisterRenderItem(gSphereItem); delete gSphereItem; gSphereItem = nullptr; }
+	if (gSphereXItem) { DeregisterRenderItem(gSphereXItem); delete gSphereXItem; gSphereXItem = nullptr; }
+	if (gSphereYItem) { DeregisterRenderItem(gSphereYItem); delete gSphereYItem; gSphereYItem = nullptr; }
+	if (gSphereZItem) { DeregisterRenderItem(gSphereZItem); delete gSphereZItem; gSphereZItem = nullptr; }
+
+	if (gSphereShape) { gSphereShape->release(); gSphereShape = nullptr; }
+
 	PX_UNUSED(interactive);
 
 	// Rigid Body ++++++++++++++++++++++++++++++++++++++++++
@@ -84,7 +123,7 @@ void cleanupPhysics(bool interactive)
 	transport->release();
 	
 	gFoundation->release();
-	}
+}
 
 // Function called when a key is pressed
 void keyPress(unsigned char key, const PxTransform& camera)

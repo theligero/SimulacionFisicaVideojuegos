@@ -10,6 +10,9 @@
     <ClCompile Include="RenderUtils.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="callbacks.cpp" />
+    <ClCompile Include="Sim\Math\Vector3D.cpp">
+      <Filter>Sim\Math</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="core.hpp" />
@@ -21,10 +24,19 @@
     </ClInclude>
     <ClInclude Include="RenderUtils.hpp" />
     <ClInclude Include="callbacks.hpp" />
+    <ClInclude Include="Sim\Math\Vector3D.hpp">
+      <Filter>Sim\Math</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Render">
       <UniqueIdentifier>{d04b4f9f-5a69-465e-8070-25c6d0bcd3c2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Sim">
+      <UniqueIdentifier>{8f3f4778-b521-4ab7-882b-223acef2bdd1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Sim\Math">
+      <UniqueIdentifier>{6bfc6da7-6150-4705-9947-70eba44f69ea}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
