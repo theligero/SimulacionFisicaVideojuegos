@@ -8,6 +8,8 @@
 #include "RenderUtils.hpp"
 #include "callbacks.hpp"
 
+#include "Sim/Particles/Particle.h"
+
 #include <iostream>
 
 std::string display_text = "This is a test";
@@ -44,6 +46,8 @@ static RenderItem* gSphereItem = nullptr;
 static RenderItem* gSphereXItem = nullptr;
 static RenderItem* gSphereYItem = nullptr;
 static RenderItem* gSphereZItem = nullptr;
+
+Particle* p = nullptr;
 
 
 // Initialize physics engine
@@ -85,6 +89,10 @@ void initPhysics(bool interactive)
 
 	gSphereZItem = new RenderItem(gSphereShape, &gSphereZTr, Vector4(0, 0, 1, 1)); // azul
 	RegisterRenderItem(gSphereZItem);
+
+	// ====== P1: CREACIÓN Y REGISTRO DE LA PARTÍCULA ======
+
+	p = new Particle(Vector3D{ 0,1,0 }, Vector3D{ 5,8,0 }, 0.2f, Vector4(1, 1, 0, 1), 5.0, 0.99f);
 }
 
 
@@ -94,6 +102,9 @@ void initPhysics(bool interactive)
 void stepPhysics(bool interactive, double t)
 {
 	PX_UNUSED(interactive);
+
+	// ====== P1: ACTUALIZACIÓN DE LA PARTÍCULA ======
+	p->Integrate(t);
 
 	gScene->simulate(t);
 	gScene->fetchResults(true);
@@ -110,6 +121,9 @@ void cleanupPhysics(bool interactive)
 	if (gSphereZItem) { DeregisterRenderItem(gSphereZItem); delete gSphereZItem; gSphereZItem = nullptr; }
 
 	if (gSphereShape) { gSphereShape->release(); gSphereShape = nullptr; }
+
+	// ====== P1: BORRADO DE LA PARTÍCULA ======
+	if (p) { delete p; p = nullptr; }
 
 	PX_UNUSED(interactive);
 

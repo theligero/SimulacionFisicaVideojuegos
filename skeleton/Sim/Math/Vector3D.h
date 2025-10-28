@@ -1,5 +1,5 @@
-#ifndef VECTOR_3D_HPP_
-#define VECTOR_3D_HPP_
+#ifndef VECTOR_3D_H_
+#define VECTOR_3D_H_
 
 #pragma once
 
@@ -25,4 +25,4 @@ public:
 	float getZ() const;
 };
 
-#endif // VECTOR_3D_HPP_
+#endif // VECTOR_3D_H_

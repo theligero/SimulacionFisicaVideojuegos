@@ -259,6 +259,7 @@
     <ClCompile Include="Render\Camera.cpp" />
     <ClCompile Include="Render\Render.cpp" />
     <ClCompile Include="Sim\Math\Vector3D.cpp" />
+    <ClCompile Include="Sim\Particles\Particle.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="callbacks.hpp" />
@@ -266,7 +267,8 @@
     <ClInclude Include="RenderUtils.hpp" />
     <ClInclude Include="Render\Camera.h" />
     <ClInclude Include="Render\Render.h" />
-    <ClInclude Include="Sim\Math\Vector3D.hpp" />
+    <ClInclude Include="Sim\Math\Vector3D.h" />
+    <ClInclude Include="Sim\Particles\Particle.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
