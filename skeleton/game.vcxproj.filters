@@ -16,6 +16,9 @@
     <ClCompile Include="Sim\Particles\Particle.cpp">
       <Filter>Sim\Particles</Filter>
     </ClCompile>
+    <ClCompile Include="Sim\Particles\ProjectileManager.cpp">
+      <Filter>Sim\Particles</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="core.hpp" />
@@ -31,6 +34,9 @@
       <Filter>Sim\Math</Filter>
     </ClInclude>
     <ClInclude Include="Sim\Particles\Particle.h">
+      <Filter>Sim\Particles</Filter>
+    </ClInclude>
+    <ClInclude Include="Sim\Particles\ProjectileManager.h">
       <Filter>Sim\Particles</Filter>
     </ClInclude>
   </ItemGroup>

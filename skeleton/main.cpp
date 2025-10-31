@@ -9,6 +9,7 @@
 #include "callbacks.hpp"
 
 #include "Sim/Particles/Particle.h"
+#include "Sim/Particles/ProjectileManager.h"
 
 #include <iostream>
 
@@ -49,6 +50,8 @@ static RenderItem* gSphereZItem = nullptr;
 
 Particle* p = nullptr;
 
+static ProjectileManager gProj;
+
 
 // Initialize physics engine
 void initPhysics(bool interactive)
@@ -79,16 +82,9 @@ void initPhysics(bool interactive)
 	// Esfera central (radio 1.0)
 	gSphereShape = CreateShape(physx::PxSphereGeometry(1.0f), gMaterial);
 	gSphereItem = new RenderItem(gSphereShape, &gSphereTr, Vector4(1, 1, 1, 1));
-	RegisterRenderItem(gSphereItem);
-
 	gSphereXItem = new RenderItem(gSphereShape, &gSphereXTr, Vector4(1, 0, 0, 1)); // rojo
-	RegisterRenderItem(gSphereXItem);
-
 	gSphereYItem = new RenderItem(gSphereShape, &gSphereYTr, Vector4(0, 1, 0, 1)); // verde
-	RegisterRenderItem(gSphereYItem);
-
 	gSphereZItem = new RenderItem(gSphereShape, &gSphereZTr, Vector4(0, 0, 1, 1)); // azul
-	RegisterRenderItem(gSphereZItem);
 
 	// ====== P1: CREACIÓN Y REGISTRO DE LA PARTÍCULA ======
 
@@ -108,6 +104,8 @@ void stepPhysics(bool interactive, double t)
 
 	gScene->simulate(t);
 	gScene->fetchResults(true);
+
+	gProj.Update(t);
 }
 
 // Function to clean data
@@ -115,15 +113,16 @@ void stepPhysics(bool interactive, double t)
 void cleanupPhysics(bool interactive)
 {
 	// ====== P0: DESREGISTRO Y LIBERACIÓN ======
-	if (gSphereItem) { DeregisterRenderItem(gSphereItem); delete gSphereItem; gSphereItem = nullptr; }
-	if (gSphereXItem) { DeregisterRenderItem(gSphereXItem); delete gSphereXItem; gSphereXItem = nullptr; }
-	if (gSphereYItem) { DeregisterRenderItem(gSphereYItem); delete gSphereYItem; gSphereYItem = nullptr; }
-	if (gSphereZItem) { DeregisterRenderItem(gSphereZItem); delete gSphereZItem; gSphereZItem = nullptr; }
+	if (gSphereItem) { gSphereItem->release(); gSphereItem = nullptr; }
+	if (gSphereXItem) { gSphereXItem->release(); gSphereXItem = nullptr; }
+	if (gSphereYItem) { gSphereYItem->release(); gSphereYItem = nullptr; }
+	if (gSphereZItem) { gSphereZItem->release(); gSphereZItem = nullptr; }
 
 	if (gSphereShape) { gSphereShape->release(); gSphereShape = nullptr; }
 
 	// ====== P1: BORRADO DE LA PARTÍCULA ======
 	if (p) { delete p; p = nullptr; }
+	gProj.Clear();
 
 	PX_UNUSED(interactive);
 
@@ -150,6 +149,32 @@ void keyPress(unsigned char key, const PxTransform& camera)
 	//case ' ':	break;
 	case ' ':
 	{
+		gProj.Fire();
+		break;
+	}
+	case '1':
+	{
+		gProj.SetCurrent(ProjectileKind::CannonBall);
+		break;
+	}
+	case '2':
+	{
+		gProj.SetCurrent(ProjectileKind::TankShell);
+		break;
+	}
+	case '3':
+	{
+		gProj.SetCurrent(ProjectileKind::Pistol);
+		break;
+	}
+	case 'q':
+	{
+		gProj.Cycle(-1);
+		break;
+	}
+	case 'e':
+	{
+		gProj.Cycle(+1);
 		break;
 	}
 	default:
