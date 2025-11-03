@@ -19,6 +19,12 @@
     <ClCompile Include="Sim\Particles\ProjectileManager.cpp">
       <Filter>Sim\Particles</Filter>
     </ClCompile>
+    <ClCompile Include="Sim\Particles\Emitter.cpp">
+      <Filter>Sim\Particles</Filter>
+    </ClCompile>
+    <ClCompile Include="Sim\Particles\ParticleSystem.cpp">
+      <Filter>Sim\Particles</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="core.hpp" />
@@ -37,6 +43,15 @@
       <Filter>Sim\Particles</Filter>
     </ClInclude>
     <ClInclude Include="Sim\Particles\ProjectileManager.h">
+      <Filter>Sim\Particles</Filter>
+    </ClInclude>
+    <ClInclude Include="Sim\Particles\Distributions.h">
+      <Filter>Sim\Particles</Filter>
+    </ClInclude>
+    <ClInclude Include="Sim\Particles\Emitter.h">
+      <Filter>Sim\Particles</Filter>
+    </ClInclude>
+    <ClInclude Include="Sim\Particles\ParticleSystem.h">
       <Filter>Sim\Particles</Filter>
     </ClInclude>
   </ItemGroup>

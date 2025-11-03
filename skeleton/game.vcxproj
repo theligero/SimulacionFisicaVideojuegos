@@ -259,7 +259,9 @@
     <ClCompile Include="Render\Camera.cpp" />
     <ClCompile Include="Render\Render.cpp" />
     <ClCompile Include="Sim\Math\Vector3D.cpp" />
+    <ClCompile Include="Sim\Particles\Emitter.cpp" />
     <ClCompile Include="Sim\Particles\Particle.cpp" />
+    <ClCompile Include="Sim\Particles\ParticleSystem.cpp" />
     <ClCompile Include="Sim\Particles\ProjectileManager.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -269,7 +271,10 @@
     <ClInclude Include="Render\Camera.h" />
     <ClInclude Include="Render\Render.h" />
     <ClInclude Include="Sim\Math\Vector3D.h" />
+    <ClInclude Include="Sim\Particles\Distributions.h" />
+    <ClInclude Include="Sim\Particles\Emitter.h" />
     <ClInclude Include="Sim\Particles\Particle.h" />
+    <ClInclude Include="Sim\Particles\ParticleSystem.h" />
     <ClInclude Include="Sim\Particles\ProjectileManager.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -29,6 +29,8 @@ public:
 	bool IsAlive() const;
 
 	void SetGravity(const Vector3D& v);
+
+	Vector3D GetPosition() const { return Vector3D{ _pose.p.x, _pose.p.y, _pose.p.z }; };
 };
 
 #endif // PARTICLE_H_

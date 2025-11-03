@@ -11,6 +11,9 @@
 #include "Sim/Particles/Particle.h"
 #include "Sim/Particles/ProjectileManager.h"
 
+#include "Sim/Particles/ParticleSystem.h"
+#include "Sim/Particles/Emitter.h"
+
 #include <iostream>
 
 std::string display_text = "This is a test";
@@ -52,6 +55,8 @@ Particle* p = nullptr;
 
 static ProjectileManager gProj;
 
+static ParticleSystem gPS;
+
 
 // Initialize physics engine
 void initPhysics(bool interactive)
@@ -89,6 +94,50 @@ void initPhysics(bool interactive)
 	// ====== P1: CREACIÓN Y REGISTRO DE LA PARTÍCULA ======
 
 	p = new Particle(Vector3D{ 0,1,0 }, Vector3D{ 5,8,0 }, 0.2f, Vector4(1, 1, 0, 1), 5.0, 0.99f);
+
+	// ====== P2: CREACIÓN Y REGISTRO DEL SISTEMA DE PARTÍCULAS ======
+	gPS.SetGravityAll(Vector3D{ 0, -10, 0 });
+
+	// Manguera / fuente: desde un punto, hacia +Z con cono pequeño
+	{
+		auto pe = std::make_unique<PointEmitter>(
+			/*pos*/ Vector3D{ 0, 10, 0 },
+			/*dir*/ Vector3D{ 0, 0, 1 },
+			/*rate*/ 120.f,				// 120 p/s
+			/*speedMean*/ 10.f, /*speedStd*/ 2.f,
+			/*life*/ 5.0, /*radius*/ 0.05f,
+			/*color*/ Vector4(0.9f, 0.9f, 1, 0.8f)
+		);
+		pe->SetCone(0.2f);
+		pe->SetPositionJitter(Vector3D{ 0.02f, 0.02f, 0.02f });
+		gPS.AddEmitter(std::move(pe));
+	}
+
+	// Fuente vertical: hacia +Y, salpicada (Gauss)
+	{
+		auto pe = std::make_unique<PointEmitter>(
+			/*pos*/ Vector3D{ -20, 0, 0 },
+			/*dir*/ Vector3D{ 0, 1, 0 },
+			/*rate*/ 80.f,				// 80 p/s
+			/*speedMean*/ 12.f, /*speedStd*/ 3.f,
+			/*life*/ 6.0, /*radius*/ 0.05f,
+			/*color*/ Vector4(0.6f, 0.8f, 1, 0.9f)
+		);
+		pe->SetCone(0.35f);
+		gPS.AddEmitter(std::move(pe));
+	}
+
+	// Niebla: caja con posiciones aleatorias, velocidades pequeñas
+	{
+		AABB box{ Vector3D{-3,0,-3}, Vector3D{3,1,3} };
+		auto be = std::make_unique<BoxEmitter>(box,
+			200.f, 0.8f, 0.3f,
+			8.0, 0.03f, Vector4(0.8f, 0.8f, 0.9f, 0.3f)
+		);
+		gPS.AddEmitter(std::move(be));
+	}
+
+	gPS.SetBounds(AABB{ Vector3D{-50, -5, -50}, Vector3D{50, 50, 50} });
 }
 
 
@@ -106,6 +155,9 @@ void stepPhysics(bool interactive, double t)
 	gScene->fetchResults(true);
 
 	gProj.Update(t);
+
+	// ====== P2: ACTUALIZACIÓN DEL SISTEMA DE PARTÍCULAS ======
+	gPS.Update(t);
 }
 
 // Function to clean data
@@ -123,6 +175,9 @@ void cleanupPhysics(bool interactive)
 	// ====== P1: BORRADO DE LA PARTÍCULA ======
 	if (p) { delete p; p = nullptr; }
 	gProj.Clear();
+
+	// ====== P2: BORRADO DEL SISTEMA DE PARTÍCULAS ======
+	gPS.Clear();
 
 	PX_UNUSED(interactive);
 
