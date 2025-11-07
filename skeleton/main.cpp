@@ -1,331 +1,238 @@
-#include <ctype.h>
+// main.cpp – Prototipo simple “Tiro al plato”
+// Controles: ESPACIO (disparar), 1/2/3 (tipo), V (viento ON/OFF), [ ] (k1 viento),
+//            G (gravedad ON/OFF), C (añadir otro lanzador de platos)
 
+#include <ctype.h>
 #include <PxPhysicsAPI.h>
 
 #include <vector>
+#include <memory>
+#include <iostream>
 
 #include "core.hpp"
 #include "RenderUtils.hpp"
 #include "callbacks.hpp"
 
-#include "Sim/Particles/Particle.h"
-#include "Sim/Particles/ProjectileManager.h"
-
+// Mi código
 #include "Sim/Particles/ParticleSystem.h"
 #include "Sim/Particles/Emitter.h"
-
-#include <iostream>
+#include "Sim/Particles/ProjectileManager.h"
 
 #include "Sim/Particles/Forces/GravityForce.h"
 #include "Sim/Particles/Forces/WindForce.h"
 #include "Sim/Particles/Forces/VortexForce.h"
 #include "Sim/Particles/Forces/ExplosionForce.h"
 
-std::string display_text = "This is a test";
-
-
 using namespace physx;
 
-PxDefaultAllocator		gAllocator;
-PxDefaultErrorCallback	gErrorCallback;
+// ===== PhysX boilerplate =====
+PxDefaultAllocator         gAllocator;
+PxDefaultErrorCallback     gErrorCallback;
+PxFoundation* gFoundation = nullptr;
+PxPhysics* gPhysics = nullptr;
+PxMaterial* gMaterial = nullptr;
+PxPvd* gPvd = nullptr;
+PxDefaultCpuDispatcher* gDispatcher = nullptr;
+PxScene* gScene = nullptr;
+ContactReportCallback      gContactCB;
 
-PxFoundation*			gFoundation = NULL;
-PxPhysics*				gPhysics	= NULL;
+// ===== Juego / Sim =====
+static ProjectileManager   gProj;
+static ParticleSystem      gPS;
 
+// Fuerzas con toggles
+static GravityForce* gGravity = nullptr; // gravedad global
+static WindForce* gWind = nullptr; // viento global
 
-PxMaterial*				gMaterial	= NULL;
+// Para añadir “lanzadores de platos” con la tecla C
+static std::vector<PointEmitter*> gClayLaunchers;
 
-PxPvd*                  gPvd        = NULL;
+std::string display_text = "This is a test";
 
-PxDefaultCpuDispatcher*	gDispatcher = NULL;
-PxScene*				gScene      = NULL;
-ContactReportCallback gContactReportCallback;
+// ========== Helpers ==========
+static PointEmitter* makeClayLauncher(
+    const Vector3D& pos,
+    const Vector3D& dir,
+    float rate = 1.5f,           // ~1-2 platos por segundo
+    float speedMean = 25.f,
+    float speedStd = 3.f,
+    double life = 8.0,       // que duren un poco
+    float radius = 0.25f)     // que se vean más grandecitos
+{
+    auto pe = std::make_unique<PointEmitter>(
+        pos, dir, rate, speedMean, speedStd, life, radius,
+        Vector4(1.0f, 0.6f, 0.2f, 1.0f)   // color naranja “plato”
+    );
+    pe->SetCone(0.15f);                 // leve dispersión
+    pe->SetPositionJitter(Vector3D{ 0.05f, 0.02f, 0.05f });
 
-// Shapes
-static physx::PxShape* gSphereShape = nullptr;
+    PointEmitter* raw = pe.get();
+    gPS.AddEmitter(std::move(pe));
+    return raw;
+}
 
-// Transforms (vida larga para que el renderer los lea cada frame)
-static physx::PxTransform gSphereTr{ physx::PxVec3(0.f, 0.f, 0.f) };
-static physx::PxTransform gSphereXTr{ physx::PxVec3(10.f, 0.f, 0.f) };
-static physx::PxTransform gSphereYTr{ physx::PxVec3(0.f, 10.f, 0.f) };
-static physx::PxTransform gSphereZTr{ physx::PxVec3(0.f, 0.f, 10.f) };
-
-// RenderItems (para poder deregistrar en cleanup)
-static RenderItem* gSphereItem = nullptr;
-static RenderItem* gSphereXItem = nullptr;
-static RenderItem* gSphereYItem = nullptr;
-static RenderItem* gSphereZItem = nullptr;
-
-Particle* p = nullptr;
-
-static ProjectileManager gProj;
-
-static ParticleSystem gPS;
-
-ExplosionForce* gExplPtr = nullptr;
-WindForce* wind = nullptr;
-
-GravityForce* grav1 = nullptr;
-GravityForce* grav2 = nullptr;
-
-
-// Initialize physics engine
+// ========== Init ==========
 void initPhysics(bool interactive)
 {
-	PX_UNUSED(interactive);
+    PX_UNUSED(interactive);
 
-	gFoundation = PxCreateFoundation(PX_FOUNDATION_VERSION, gAllocator, gErrorCallback);
+    gFoundation = PxCreateFoundation(PX_FOUNDATION_VERSION, gAllocator, gErrorCallback);
+    gPvd = PxCreatePvd(*gFoundation);
+    PxPvdTransport* transport = PxDefaultPvdSocketTransportCreate(PVD_HOST, 5425, 10);
+    gPvd->connect(*transport, PxPvdInstrumentationFlag::eALL);
+    gPhysics = PxCreatePhysics(PX_PHYSICS_VERSION, *gFoundation, PxTolerancesScale(), true, gPvd);
+    gMaterial = gPhysics->createMaterial(0.5f, 0.5f, 0.6f);
 
-	gPvd = PxCreatePvd(*gFoundation);
-	PxPvdTransport* transport = PxDefaultPvdSocketTransportCreate(PVD_HOST, 5425, 10);
-	gPvd->connect(*transport,PxPvdInstrumentationFlag::eALL);
+    PxSceneDesc desc(gPhysics->getTolerancesScale());
+    desc.gravity = PxVec3(0.f, -9.8f, 0.f);
+    gDispatcher = PxDefaultCpuDispatcherCreate(2);
+    desc.cpuDispatcher = gDispatcher;
+    desc.filterShader = contactReportFilterShader;
+    desc.simulationEventCallback = &gContactCB;
+    gScene = gPhysics->createScene(desc);
 
-	gPhysics = PxCreatePhysics(PX_PHYSICS_VERSION, *gFoundation, PxTolerancesScale(),true,gPvd);
+    // ===== Mundo de partículas =====
+    // Límites amplios
+    gPS.SetBounds(AABB{ Vector3D{-80, -10, -80}, Vector3D{ 80, 60, 80 } });
 
-	gMaterial = gPhysics->createMaterial(0.5f, 0.5f, 0.6f);
+    // Gravedad global (toggle con G)
+    auto g = std::make_unique<GravityForce>(Vector3D{ 0, -9.8f, 0 });
+    gGravity = g.get();
+    gPS.AddForceGenerator(std::move(g));
 
-	// For Solid Rigids +++++++++++++++++++++++++++++++++++++
-	PxSceneDesc sceneDesc(gPhysics->getTolerancesScale());
-	sceneDesc.gravity = PxVec3(0.0f, -9.8f, 0.0f);
-	gDispatcher = PxDefaultCpuDispatcherCreate(2);
-	sceneDesc.cpuDispatcher = gDispatcher;
-	sceneDesc.filterShader = contactReportFilterShader;
-	sceneDesc.simulationEventCallback = &gContactReportCallback;
-	gScene = gPhysics->createScene(sceneDesc);
+    // Viento global suave hacia +X (toggle con V, ajustar con [ ])
+    auto w = std::make_unique<WindForce>(Vector3D{ 15.f, 0.f, 0.f }, /*k1*/1.0f, /*k2*/0.2f);
+    gWind = w.get();
+    gPS.AddForceGenerator(std::move(w));
 
-	// ====== P0: CREACIÓN Y REGISTRO DE GEOMETRÍAS ======
+    // (Opcional) pequeña “brisa” local en un volumen (comentado por simplicidad)
+    // {
+    //     auto wvol = std::make_unique<WindForce>(Vector3D{ 0.f, 0.f, 12.f }, 1.0f, 0.0f);
+    //     wvol->SetVolume(AABB{ Vector3D{-10, 0, -2}, Vector3D{10, 6, 10} });
+    //     gPS.AddForceGenerator(std::move(wvol));
+    // }
 
-	// Esfera central (radio 1.0)
-	gSphereShape = CreateShape(physx::PxSphereGeometry(1.0f), gMaterial);
-	gSphereItem = new RenderItem(gSphereShape, &gSphereTr, Vector4(1, 1, 1, 1));
-	gSphereXItem = new RenderItem(gSphereShape, &gSphereXTr, Vector4(1, 0, 0, 1)); // rojo
-	gSphereYItem = new RenderItem(gSphereShape, &gSphereYTr, Vector4(0, 1, 0, 1)); // verde
-	gSphereZItem = new RenderItem(gSphereShape, &gSphereZTr, Vector4(0, 0, 1, 1)); // azul
+    // Un lanzador de platos por defecto:
+    // Colócalo a la izquierda del “campo”, lanzando ligeramente hacia arriba y adelante (+X, +Y, +Z)
+    {
+        Vector3D pos{ -30.f, 2.f, -15.f };
+        Vector3D dir{ 1.f, 0.25f, 0.25f }; // un poco hacia arriba y al frente
+        gClayLaunchers.push_back(makeClayLauncher(pos, dir));
+    }
 
-	// ====== P1: CREACIÓN Y REGISTRO DE LA PARTÍCULA ======
+    // Nieblilla/partículas ambiente para dar contexto (muy sutil)
+    {
+        AABB box{ Vector3D{-5, 0, -5}, Vector3D{5, 2, 5} };
+        auto be = std::make_unique<BoxEmitter>(box,
+            /*rate*/ 80.f, /*speedMean*/ 0.6f, /*speedStd*/ 0.25f,
+            /*life*/ 6.0, /*radius*/ 0.035f, Vector4(0.85f, 0.9f, 1.f, 0.25f));
+        gPS.AddEmitter(std::move(be));
+    }
 
-	p = new Particle(Vector3D{ 0,1,0 }, Vector3D{ 5,8,0 }, 0.2f, Vector4(1, 1, 0, 1), 5.0, 0.99f);
-
-	// ====== P2: CREACIÓN Y REGISTRO DEL SISTEMA DE PARTÍCULAS ======
-	gPS.SetGravityAll(Vector3D{ 0, -10, 0 });
-
-	// Manguera / fuente: desde un punto, hacia +Z con cono pequeño
-	{
-		auto pe = std::make_unique<PointEmitter>(
-			/*pos*/ Vector3D{ 0, 10, 0 },
-			/*dir*/ Vector3D{ 0, 0, 1 },
-			/*rate*/ 120.f,				// 120 p/s
-			/*speedMean*/ 10.f, /*speedStd*/ 2.f,
-			/*life*/ 5.0, /*radius*/ 0.05f,
-			/*color*/ Vector4(0.9f, 0.9f, 1, 0.8f)
-		);
-		pe->SetCone(0.2f);
-		pe->SetPositionJitter(Vector3D{ 0.02f, 0.02f, 0.02f });
-		gPS.AddEmitter(std::move(pe));
-	}
-
-	// Fuente vertical: hacia +Y, salpicada (Gauss)
-	{
-		auto pe = std::make_unique<PointEmitter>(
-			/*pos*/ Vector3D{ -20, 0, 0 },
-			/*dir*/ Vector3D{ 0, 1, 0 },
-			/*rate*/ 80.f,				// 80 p/s
-			/*speedMean*/ 12.f, /*speedStd*/ 3.f,
-			/*life*/ 6.0, /*radius*/ 0.05f,
-			/*color*/ Vector4(0.6f, 0.8f, 1, 0.9f)
-		);
-		pe->SetCone(0.35f);
-		gPS.AddEmitter(std::move(pe));
-	}
-
-	// Niebla: caja con posiciones aleatorias, velocidades pequeñas
-	{
-		AABB box{ Vector3D{-3,0,-3}, Vector3D{3,1,3} };
-		auto be = std::make_unique<BoxEmitter>(box,
-			200.f, 0.8f, 0.3f,
-			8.0, 0.03f, Vector4(0.8f, 0.8f, 0.9f, 0.3f)
-		);
-		gPS.AddEmitter(std::move(be));
-	}
-
-	gPS.SetBounds(AABB{ Vector3D{-50, -5, -50}, Vector3D{50, 50, 50} });
-
-	// ====== P3: CREACIÓN Y REGISTRO DE LOS GENERADORES DE FUERZA ======
-
-	// Gravedad 1 (normal)
-	auto g1 = std::make_unique<GravityForce>(Vector3D{ 0, -9.8, 0 });
-	grav1 = g1.get();
-	gPS.AddForceGenerator(std::move(g1));
-
-	// Gravedad 2 (más suave) - para comparar con masas distintas
-	auto g2 = std::make_unique<GravityForce>(Vector3D{ 0, -3.0, 0 });
-	grav2 = g2.get();
-	gPS.AddForceGenerator(std::move(g2));
-
-	// Viento en un volumen (k1>0, k2=0 al principio)
-	{
-		auto w = std::make_unique<WindForce>(Vector3D{ 0, 0, 0 }, 2.0f, 0.0f);
-		w->SetVolume(AABB{ Vector3D{-5, 0, -5}, Vector3D{5, 5, 5} });
-		wind = w.get();
-		gPS.AddForceGenerator(std::move(w));
-	}
-
-	// Torbellino centrado en el origen, K = 4
-	gPS.AddForceGenerator(std::make_unique<VortexForce>(Vector3D{ 0, 0, 0 }, 4.0f, 1.0f, 0.0f));
-
-	// Explosión (no activa hasta que la dispares)
-	auto expl = std::make_unique<ExplosionForce>(Vector3D{ 0, 1, 0 }, 2000.f, 6.f, 1.0f);
-	gExplPtr = expl.get(); // guarda puntero para trigger con tecla
-	gPS.AddForceGenerator(std::move(expl));
-
-	// viento global muy fuerte (sin volumen) – debería arrastrar todo a +X
-	gPS.AddForceGenerator(std::make_unique<WindForce>(Vector3D{ 30, 0, 0 }, /*k1*/ 2.0f, /*k2*/ 0.0f));
+    // (Opcional) pequeño vórtice para gracia visual (OFF por simplicidad)
+    // gPS.AddForceGenerator(std::make_unique<VortexForce>(Vector3D{0,0,0}, 3.0f, 1.0f, 0.0f));
 }
 
-
-// Function to configure what happens in each step of physics
-// interactive: true if the game is rendering, false if it offline
-// t: time passed since last call in milliseconds
-void stepPhysics(bool interactive, double t)
+// ========== Step ==========
+void stepPhysics(bool interactive, double dt)
 {
-	PX_UNUSED(interactive);
+    PX_UNUSED(interactive);
 
-	// ====== P1: ACTUALIZACIÓN DE LA PARTÍCULA ======
-	p->Integrate(t);
+    gScene->simulate(dt);
+    gScene->fetchResults(true);
 
-	gScene->simulate(t);
-	gScene->fetchResults(true);
-
-	gProj.Update(t);
-
-	// ====== P2: ACTUALIZACIÓN DEL SISTEMA DE PARTÍCULAS ======
-	gPS.Update(t);
+    gProj.Update(dt);
+    gPS.Update(dt);
 }
 
-// Function to clean data
-// Add custom code to the begining of the function
+// ========== Cleanup ==========
 void cleanupPhysics(bool interactive)
 {
-	// ====== P0: DESREGISTRO Y LIBERACIÓN ======
-	if (gSphereItem) { gSphereItem->release(); gSphereItem = nullptr; }
-	if (gSphereXItem) { gSphereXItem->release(); gSphereXItem = nullptr; }
-	if (gSphereYItem) { gSphereYItem->release(); gSphereYItem = nullptr; }
-	if (gSphereZItem) { gSphereZItem->release(); gSphereZItem = nullptr; }
+    PX_UNUSED(interactive);
 
-	if (gSphereShape) { gSphereShape->release(); gSphereShape = nullptr; }
+    gProj.Clear();
+    gPS.Clear();
 
-	// ====== P1: BORRADO DE LA PARTÍCULA ======
-	if (p) { delete p; p = nullptr; }
-	gProj.Clear();
+    gScene->release();
+    gDispatcher->release();
 
-	// ====== P2: BORRADO DEL SISTEMA DE PARTÍCULAS ======
-	gPS.Clear();
+    gPhysics->release();
+    PxPvdTransport* transport = gPvd->getTransport();
+    gPvd->release();
+    transport->release();
 
-	PX_UNUSED(interactive);
-
-	// Rigid Body ++++++++++++++++++++++++++++++++++++++++++
-	gScene->release();
-	gDispatcher->release();
-	// -----------------------------------------------------
-	gPhysics->release();	
-	PxPvdTransport* transport = gPvd->getTransport();
-	gPvd->release();
-	transport->release();
-	
-	gFoundation->release();
+    gFoundation->release();
 }
 
-// Function called when a key is pressed
+// ========== Input ==========
 void keyPress(unsigned char key, const PxTransform& camera)
 {
-	PX_UNUSED(camera);
+    PX_UNUSED(camera);
 
-	switch(toupper(key))
-	{
-	//case 'B': break;
-	//case ' ':	break;
-	case ' ':
-	{
-		gProj.Fire();
-		break;
-	}
-	case '1':
-	{
-		gProj.SetCurrent(ProjectileKind::CannonBall);
-		break;
-	}
-	case '2':
-	{
-		gProj.SetCurrent(ProjectileKind::TankShell);
-		break;
-	}
-	case '3':
-	{
-		gProj.SetCurrent(ProjectileKind::Pistol);
-		break;
-	}
-	case 'q':
-	{
-		gProj.Cycle(-1);
-		break;
-	}
-	case 'e':
-	{
-		gProj.Cycle(+1);
-		break;
-	}
+    switch (toupper(key))
+    {
+    case ' ':
+        gProj.Fire();
+        break;
 
-	case 'V': {
-		wind->SetEnabled(!wind->Enabled());
-		std::cout << "Viento " << (wind->Enabled() ? "ON" : "OFF") << "\n"; break;
-	}
-	case '[': {
-		wind->SetK1(wind->GetK1() - 0.5f);
-		std::cout << "k1=" << wind->GetK1() << "\n"; break;
-	}
-	case ']': {
-		wind->SetK1(wind->GetK1() + 0.5f);
-		std::cout << "k1=" << wind->GetK1() << "\n"; break;
-	}
-			// ... idem k2, y para vortex: SetK()/K()
-	case 'G': { 
-		grav1->SetEnabled(!grav1->Enabled());
-		std::cout << "grav1=" << grav1->Enabled() << "\n";
-		break; 
-	}
-	case 'H': { 
-		grav2->SetEnabled(!grav2->Enabled());
-		std::cout << "grav2=" << grav2->Enabled() << "\n";
-		break; 
-	}
-	case 'X': { if (gExplPtr) gExplPtr->Reset(); break; }
-	case 'Z': { if (gExplPtr) gExplPtr->Stop();  break; }
+    case '1': gProj.SetCurrent(ProjectileKind::CannonBall); break;
+    case '2': gProj.SetCurrent(ProjectileKind::TankShell);  break;
+    case '3': gProj.SetCurrent(ProjectileKind::Pistol);     break;
 
+    case 'V':
+        if (gWind) {
+            gWind->SetEnabled(!gWind->Enabled());
+            std::cout << "[Wind] " << (gWind->Enabled() ? "ON" : "OFF") << "\n";
+        }
+        break;
 
-	default:
-		break;
-	}
+    case '[':
+        if (gWind) { gWind->SetK1(gWind->GetK1() - 0.5f); std::cout << "k1=" << gWind->GetK1() << "\n"; }
+        break;
+
+    case ']':
+        if (gWind) { gWind->SetK1(gWind->GetK1() + 0.5f); std::cout << "k1=" << gWind->GetK1() << "\n"; }
+        break;
+
+    case 'G':
+        if (gGravity) {
+            gGravity->SetEnabled(!gGravity->Enabled());
+            std::cout << "[Gravity] " << (gGravity->Enabled() ? "ON" : "OFF") << "\n";
+        }
+        break;
+
+    case 'C':
+    {
+        // Añade otro lanzador (posición un poco distinta para variedad)
+        float x = -30.f, y = 2.f, z = -15.f + (float)(rand() % 10 - 5);
+        Vector3D pos{ x, y, z };
+        Vector3D dir{ 1.f, 0.28f, 0.18f };
+        auto pe = makeClayLauncher(pos, dir, /*rate*/1.0f);
+        gClayLaunchers.push_back(pe);
+        std::cout << "[Clay] Nuevo lanzador añadido. Total=" << gClayLaunchers.size() << "\n";
+        break;
+    }
+
+    default: break;
+    }
 }
 
-void onCollision(physx::PxActor* actor1, physx::PxActor* actor2)
+void onCollision(physx::PxActor* a1, physx::PxActor* a2)
 {
-	PX_UNUSED(actor1);
-	PX_UNUSED(actor2);
+    PX_UNUSED(a1); PX_UNUSED(a2);
+    // Sin colisiones en este prototipo
 }
 
-
-int main(int, const char*const*)
+// ========== Main ==========
+int main(int, const char* const*)
 {
-#ifndef OFFLINE_EXECUTION 
-	extern void renderLoop();
-	renderLoop();
+#ifndef OFFLINE_EXECUTION
+    extern void renderLoop();
+    renderLoop();
 #else
-	static const PxU32 frameCount = 100;
-	initPhysics(false);
-	for(PxU32 i=0; i<frameCount; i++)
-		stepPhysics(false);
-	cleanupPhysics(false);
+    initPhysics(false);
+    for (PxU32 i = 0; i < 600; ++i) stepPhysics(false, 1.0 / 60.0);
+    cleanupPhysics(false);
 #endif
-
-	return 0;
+    return 0;
 }
