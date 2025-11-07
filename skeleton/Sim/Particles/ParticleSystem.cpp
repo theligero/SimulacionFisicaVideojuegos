@@ -2,6 +2,8 @@
 
 #include "Particle.h"
 
+#include <iostream>
+
 bool ParticleSystem::Outside(const Vector3D& p) const {
 	if (!_useBounds) return false;
 	return p.getX() < _bounds.min.getX() || p.getY() < _bounds.min.getY() || p.getZ() < _bounds.min.getZ() ||
@@ -30,9 +32,10 @@ void ParticleSystem::Update(double dt) {
 	// Pedir a cada emisor nuevas partículas
 	for (auto& e : _emitters) e->Emit(dt, _particles);
 
-	// Aplicar gravedad común si ya se ha fijado (sobreescribe lo del emisor)
-	if (_gravitySet) {
-		for (auto& p : _particles) if (p) p->SetGravity(_gravity);
+	// Aplicar generadores de fuerza
+	for (auto& p : _particles) if (p) p->ClearForces();
+	for (auto& fg : _forces) {
+		for (auto& p : _particles) if (p) fg->Apply(*p, dt);
 	}
 
 	// Integrar
@@ -57,4 +60,14 @@ void ParticleSystem::Clear() {
 
 size_t ParticleSystem::Count() const {
 	return _particles.size();
+}
+
+void ParticleSystem::AddForceGenerator(std::unique_ptr<ForceGenerator> f)
+{
+	_forces.emplace_back(std::move(f));
+}
+
+std::vector<std::unique_ptr<ForceGenerator>>& ParticleSystem::Forces()
+{
+	return _forces;
 }

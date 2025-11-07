@@ -2,6 +2,7 @@
 #define PARTICLE_SYSTEM_H_
 
 #include "Emitter.h"
+#include "Forces/ForceGenerator.h"
 
 class ParticleSystem
 {
@@ -17,6 +18,8 @@ private:
 	AABB _bounds{ Vector3D{-50,-50,-50}, Vector3D{50,50,50} };
 	bool _useBounds = false;
 
+	std::vector<std::unique_ptr<ForceGenerator>> _forces;
+
 public:
 	ParticleSystem() = default;
 	~ParticleSystem();
@@ -30,6 +33,9 @@ public:
 	void Clear();
 
 	size_t Count() const;
+
+	void AddForceGenerator(std::unique_ptr<ForceGenerator> f);
+	std::vector<std::unique_ptr<ForceGenerator>>& Forces();
 };
 
 #endif // PARTICLE_SYSTEM_H_

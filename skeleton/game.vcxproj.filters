@@ -25,6 +25,21 @@
     <ClCompile Include="Sim\Particles\ParticleSystem.cpp">
       <Filter>Sim\Particles</Filter>
     </ClCompile>
+    <ClCompile Include="Sim\Particles\Forces\ForceGenerator.cpp">
+      <Filter>Sim\Particles\Forces</Filter>
+    </ClCompile>
+    <ClCompile Include="Sim\Particles\Forces\GravityForce.cpp">
+      <Filter>Sim\Particles\Forces</Filter>
+    </ClCompile>
+    <ClCompile Include="Sim\Particles\Forces\WindForce.cpp">
+      <Filter>Sim\Particles\Forces</Filter>
+    </ClCompile>
+    <ClCompile Include="Sim\Particles\Forces\VortexForce.cpp">
+      <Filter>Sim\Particles\Forces</Filter>
+    </ClCompile>
+    <ClCompile Include="Sim\Particles\Forces\ExplosionForce.cpp">
+      <Filter>Sim\Particles\Forces</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="core.hpp" />
@@ -54,6 +69,24 @@
     <ClInclude Include="Sim\Particles\ParticleSystem.h">
       <Filter>Sim\Particles</Filter>
     </ClInclude>
+    <ClInclude Include="Sim\Particles\Forces\ForceGenerator.h">
+      <Filter>Sim\Particles\Forces</Filter>
+    </ClInclude>
+    <ClInclude Include="Sim\Particles\Forces\GravityForce.h">
+      <Filter>Sim\Particles\Forces</Filter>
+    </ClInclude>
+    <ClInclude Include="Sim\Particles\Forces\WindForce.h">
+      <Filter>Sim\Particles\Forces</Filter>
+    </ClInclude>
+    <ClInclude Include="Sim\Particles\Forces\VortexForce.h">
+      <Filter>Sim\Particles\Forces</Filter>
+    </ClInclude>
+    <ClInclude Include="Sim\Particles\Forces\ExplosionForce.h">
+      <Filter>Sim\Particles\Forces</Filter>
+    </ClInclude>
+    <ClInclude Include="Sim\Utils\AABB.h">
+      <Filter>Sim\Utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Render">
@@ -67,6 +100,12 @@
     </Filter>
     <Filter Include="Sim\Particles">
       <UniqueIdentifier>{bccf9509-5566-416f-9d3c-0a37f5a5b289}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Sim\Particles\Forces">
+      <UniqueIdentifier>{795b5b23-f963-4c4b-aa66-77f00ba4b52a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Sim\Utils">
+      <UniqueIdentifier>{08805edd-a50a-4085-86c7-87dd1fb077cf}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

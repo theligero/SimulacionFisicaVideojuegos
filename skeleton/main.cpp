@@ -16,6 +16,11 @@
 
 #include <iostream>
 
+#include "Sim/Particles/Forces/GravityForce.h"
+#include "Sim/Particles/Forces/WindForce.h"
+#include "Sim/Particles/Forces/VortexForce.h"
+#include "Sim/Particles/Forces/ExplosionForce.h"
+
 std::string display_text = "This is a test";
 
 
@@ -56,6 +61,12 @@ Particle* p = nullptr;
 static ProjectileManager gProj;
 
 static ParticleSystem gPS;
+
+ExplosionForce* gExplPtr = nullptr;
+WindForce* wind = nullptr;
+
+GravityForce* grav1 = nullptr;
+GravityForce* grav2 = nullptr;
 
 
 // Initialize physics engine
@@ -138,6 +149,37 @@ void initPhysics(bool interactive)
 	}
 
 	gPS.SetBounds(AABB{ Vector3D{-50, -5, -50}, Vector3D{50, 50, 50} });
+
+	// ====== P3: CREACIÓN Y REGISTRO DE LOS GENERADORES DE FUERZA ======
+
+	// Gravedad 1 (normal)
+	auto g1 = std::make_unique<GravityForce>(Vector3D{ 0, -9.8, 0 });
+	grav1 = g1.get();
+	gPS.AddForceGenerator(std::move(g1));
+
+	// Gravedad 2 (más suave) - para comparar con masas distintas
+	auto g2 = std::make_unique<GravityForce>(Vector3D{ 0, -3.0, 0 });
+	grav2 = g2.get();
+	gPS.AddForceGenerator(std::move(g2));
+
+	// Viento en un volumen (k1>0, k2=0 al principio)
+	{
+		auto w = std::make_unique<WindForce>(Vector3D{ 0, 0, 0 }, 2.0f, 0.0f);
+		w->SetVolume(AABB{ Vector3D{-5, 0, -5}, Vector3D{5, 5, 5} });
+		wind = w.get();
+		gPS.AddForceGenerator(std::move(w));
+	}
+
+	// Torbellino centrado en el origen, K = 4
+	gPS.AddForceGenerator(std::make_unique<VortexForce>(Vector3D{ 0, 0, 0 }, 4.0f, 1.0f, 0.0f));
+
+	// Explosión (no activa hasta que la dispares)
+	auto expl = std::make_unique<ExplosionForce>(Vector3D{ 0, 1, 0 }, 2000.f, 6.f, 1.0f);
+	gExplPtr = expl.get(); // guarda puntero para trigger con tecla
+	gPS.AddForceGenerator(std::move(expl));
+
+	// viento global muy fuerte (sin volumen) – debería arrastrar todo a +X
+	gPS.AddForceGenerator(std::make_unique<WindForce>(Vector3D{ 30, 0, 0 }, /*k1*/ 2.0f, /*k2*/ 0.0f));
 }
 
 
@@ -232,6 +274,34 @@ void keyPress(unsigned char key, const PxTransform& camera)
 		gProj.Cycle(+1);
 		break;
 	}
+
+	case 'V': {
+		wind->SetEnabled(!wind->Enabled());
+		std::cout << "Viento " << (wind->Enabled() ? "ON" : "OFF") << "\n"; break;
+	}
+	case '[': {
+		wind->SetK1(wind->GetK1() - 0.5f);
+		std::cout << "k1=" << wind->GetK1() << "\n"; break;
+	}
+	case ']': {
+		wind->SetK1(wind->GetK1() + 0.5f);
+		std::cout << "k1=" << wind->GetK1() << "\n"; break;
+	}
+			// ... idem k2, y para vortex: SetK()/K()
+	case 'G': { 
+		grav1->SetEnabled(!grav1->Enabled());
+		std::cout << "grav1=" << grav1->Enabled() << "\n";
+		break; 
+	}
+	case 'H': { 
+		grav2->SetEnabled(!grav2->Enabled());
+		std::cout << "grav2=" << grav2->Enabled() << "\n";
+		break; 
+	}
+	case 'X': { if (gExplPtr) gExplPtr->Reset(); break; }
+	case 'Z': { if (gExplPtr) gExplPtr->Stop();  break; }
+
+
 	default:
 		break;
 	}

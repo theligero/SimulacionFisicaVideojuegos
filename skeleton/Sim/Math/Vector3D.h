@@ -20,6 +20,10 @@ public:
 	Vector3D operator+(const Vector3D& o) const;
 	Vector3D operator-(const Vector3D& o) const;
 
+	Vector3D operator+=(const Vector3D& o);
+	Vector3D operator-=(const Vector3D& o);
+	Vector3D operator*=(float s);
+
 	float getX() const;
 	float getY() const;
 	float getZ() const;

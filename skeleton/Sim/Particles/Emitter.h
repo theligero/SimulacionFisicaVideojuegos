@@ -7,14 +7,11 @@
 #include <vector>
 #include "PxPhysicsAPI.h"
 #include "../Math/Vector3D.h"
+#include "../Utils/AABB.h"
 #include "Distributions.h"
 #include "../../core.hpp"
 
 class Particle;
-
-struct AABB {
-	Vector3D min, max;
-};
 
 class IEmitter {
 public:

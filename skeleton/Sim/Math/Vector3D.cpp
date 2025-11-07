@@ -38,6 +38,24 @@ Vector3D Vector3D::operator-(const Vector3D& o) const
 	return Vector3D{ _x - o._x, _y - o._y, _z - o._z };
 }
 
+Vector3D Vector3D::operator+=(const Vector3D& o)
+{
+	_x += o._x; _y += o._y; _z += o._z;
+	return *this;
+}
+
+Vector3D Vector3D::operator-=(const Vector3D& o)
+{
+	_x -= o._x; _y -= o._y; _z -= o._z;
+	return *this;
+}
+
+Vector3D Vector3D::operator*=(float s)
+{
+	_x *= s; _y *= s; _z *= s;
+	return *this;
+}
+
 float Vector3D::getX() const
 {
 	return _x;
