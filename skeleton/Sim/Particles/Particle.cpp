@@ -35,6 +35,8 @@ void Particle::Integrate(double dt)
 	if (!IsAlive()) return;
 
 	Vector3D a = ((_mass > 0.f) ? _forceAcc * (1.0f / _mass) : Vector3D{ 0, 0, 0 });
+	// Gravedad propia de la partícula
+	a += _grav;
 	_vel = _vel + a * float(dt);
 
 	// Damping "por segundo": elevar a dt para que sea independiente del frame

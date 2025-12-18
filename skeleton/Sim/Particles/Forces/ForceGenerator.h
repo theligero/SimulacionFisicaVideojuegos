@@ -16,6 +16,9 @@ public:
 
 	// Aplica F a la partícula (usando addForce)
 	virtual void Apply(Particle& p, double dt) = 0;
+
+	// Para sólidos rígidos (PhysX)
+	virtual void Apply(physx::PxRigidDynamic* rb, double dt) = 0;
 };
 
 #endif // FORCE_GENERATOR_H_

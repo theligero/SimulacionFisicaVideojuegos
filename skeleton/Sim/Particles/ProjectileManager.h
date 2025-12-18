@@ -47,6 +47,8 @@ public:
 	void Clear();
 
 	size_t Size() const;
+
+	const std::vector<std::unique_ptr<Particle>>& GetParticles() const;
 };
 
 #endif // PROJECTILE_MANAGER_H_

@@ -34,6 +34,8 @@ public:
 	float GetK2() const;
 
 	void Apply(Particle& p, double dt) override;
+
+	virtual void Apply(physx::PxRigidDynamic* rb, double dt) override;
 };
 
 #endif // WIND_FORCE_H_
