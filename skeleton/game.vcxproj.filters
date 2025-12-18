@@ -40,6 +40,15 @@
     <ClCompile Include="Sim\Particles\Forces\ExplosionForce.cpp">
       <Filter>Sim\Particles\Forces</Filter>
     </ClCompile>
+    <ClCompile Include="Sim\Particles\Forces\Springs\SpringForceGenerator.cpp">
+      <Filter>Sim\Particles\Forces\Springs</Filter>
+    </ClCompile>
+    <ClCompile Include="Sim\Particles\Forces\Springs\AnchoredSpringFG.cpp">
+      <Filter>Sim\Particles\Forces\Springs</Filter>
+    </ClCompile>
+    <ClCompile Include="Sim\Particles\Forces\BuoyancyForceGenerator.cpp">
+      <Filter>Sim\Particles\Forces</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="core.hpp" />
@@ -87,6 +96,15 @@
     <ClInclude Include="Sim\Utils\AABB.h">
       <Filter>Sim\Utils</Filter>
     </ClInclude>
+    <ClInclude Include="Sim\Particles\Forces\Springs\AnchoredSpringFG.h">
+      <Filter>Sim\Particles\Forces\Springs</Filter>
+    </ClInclude>
+    <ClInclude Include="Sim\Particles\Forces\Springs\SpringForceGenerator.h">
+      <Filter>Sim\Particles\Forces\Springs</Filter>
+    </ClInclude>
+    <ClInclude Include="Sim\Particles\Forces\BuoyancyForceGenerator.h">
+      <Filter>Sim\Particles\Forces</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Render">
@@ -106,6 +124,9 @@
     </Filter>
     <Filter Include="Sim\Utils">
       <UniqueIdentifier>{08805edd-a50a-4085-86c7-87dd1fb077cf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Sim\Particles\Forces\Springs">
+      <UniqueIdentifier>{41b41c4c-3a95-47bd-87b9-02f42b67438a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

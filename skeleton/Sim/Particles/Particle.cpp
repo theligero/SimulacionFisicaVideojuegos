@@ -82,3 +82,8 @@ void Particle::ClearForces()
 {
 	_forceAcc = Vector3D{ 0, 0, 0 };
 }
+
+void Particle::SetMass(float mass)
+{
+	_mass = mass;
+}

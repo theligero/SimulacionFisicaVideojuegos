@@ -41,6 +41,8 @@ public:
 	physx::PxVec3 GetPositionPx() const;
 	void AddForce(const Vector3D& f);
 	void ClearForces();
+
+	void SetMass(float mass);
 };
 
 #endif // PARTICLE_H_

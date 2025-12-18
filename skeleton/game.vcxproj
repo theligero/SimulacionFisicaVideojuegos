@@ -260,9 +260,12 @@
     <ClCompile Include="Render\Render.cpp" />
     <ClCompile Include="Sim\Math\Vector3D.cpp" />
     <ClCompile Include="Sim\Particles\Emitter.cpp" />
+    <ClCompile Include="Sim\Particles\Forces\BuoyancyForceGenerator.cpp" />
     <ClCompile Include="Sim\Particles\Forces\ExplosionForce.cpp" />
     <ClCompile Include="Sim\Particles\Forces\ForceGenerator.cpp" />
     <ClCompile Include="Sim\Particles\Forces\GravityForce.cpp" />
+    <ClCompile Include="Sim\Particles\Forces\Springs\AnchoredSpringFG.cpp" />
+    <ClCompile Include="Sim\Particles\Forces\Springs\SpringForceGenerator.cpp" />
     <ClCompile Include="Sim\Particles\Forces\VortexForce.cpp" />
     <ClCompile Include="Sim\Particles\Forces\WindForce.cpp" />
     <ClCompile Include="Sim\Particles\Particle.cpp" />
@@ -278,9 +281,12 @@
     <ClInclude Include="Sim\Math\Vector3D.h" />
     <ClInclude Include="Sim\Particles\Distributions.h" />
     <ClInclude Include="Sim\Particles\Emitter.h" />
+    <ClInclude Include="Sim\Particles\Forces\BuoyancyForceGenerator.h" />
     <ClInclude Include="Sim\Particles\Forces\ExplosionForce.h" />
     <ClInclude Include="Sim\Particles\Forces\ForceGenerator.h" />
     <ClInclude Include="Sim\Particles\Forces\GravityForce.h" />
+    <ClInclude Include="Sim\Particles\Forces\Springs\AnchoredSpringFG.h" />
+    <ClInclude Include="Sim\Particles\Forces\Springs\SpringForceGenerator.h" />
     <ClInclude Include="Sim\Particles\Forces\VortexForce.h" />
     <ClInclude Include="Sim\Particles\Forces\WindForce.h" />
     <ClInclude Include="Sim\Particles\Particle.h" />
