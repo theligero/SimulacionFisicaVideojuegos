@@ -10,12 +10,8 @@ El objetivo es **maximizar la puntuación** derribando patos antes de que desapa
 
 ## 3. Arquitectura y diagrama de clases
 
-Incluye un diagrama con estos bloques (mínimo):
-
 * **Partículas**: `Particle`, `ProjectileManager`, `ParticleSystem`, `IEmitter` (`PointEmitter`, `BoxEmitter`), `ForceGenerator` (`GravityForce`, `WindForce`).
 * **Rígidos**: `DuckManager` → `Duck` (con `PxRigidDynamic* body` + `RenderItem* renderItem`), `GameManager`.
-
-Si quieres hacerlo rápido, pega esto en diagrams.net como guía (o PlantUML si usas):
 
 * `ParticleSystem` **contiene** `emitters`, `particles`, `forces`.
 * `ForceGenerator` es interfaz -> `GravityForce`, `WindForce`.
@@ -78,7 +74,6 @@ interpretar como una “segunda oportunidad” de disparo.
 
 ## 6. Cumplimiento del enunciado (archivo / líneas)
 
-Copia el estilo de tu memoria intermedia  y rellena con líneas reales (en VS: activa números de línea o usa `nl -ba fichero.cpp`).
 
 | Requisito (enunciado)                           | Implementación                                           | Archivo / líneas                              |
 | ----------------------------------------------- | -------------------------------------------------------- | --------------------------------------------- |
