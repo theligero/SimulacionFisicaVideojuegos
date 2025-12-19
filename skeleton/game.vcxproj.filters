@@ -49,6 +49,15 @@
     <ClCompile Include="Sim\Particles\Forces\BuoyancyForceGenerator.cpp">
       <Filter>Sim\Particles\Forces</Filter>
     </ClCompile>
+    <ClCompile Include="Game\DuckManager.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\GameManager.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\HUD.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="core.hpp" />
@@ -105,6 +114,15 @@
     <ClInclude Include="Sim\Particles\Forces\BuoyancyForceGenerator.h">
       <Filter>Sim\Particles\Forces</Filter>
     </ClInclude>
+    <ClInclude Include="Game\DuckManager.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\GameManager.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\HUD.h">
+      <Filter>Game</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Render">
@@ -127,6 +145,9 @@
     </Filter>
     <Filter Include="Sim\Particles\Forces\Springs">
       <UniqueIdentifier>{41b41c4c-3a95-47bd-87b9-02f42b67438a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game">
+      <UniqueIdentifier>{2441e969-0303-4864-a68a-39cdb5560b6f}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

@@ -5,6 +5,9 @@
 #include "core.hpp"
 #include "RenderUtils.hpp"
 
+#include "Game/HUD.h"
+#include "Game/GameManager.h"
+
 
 using namespace physx;
 
@@ -14,6 +17,8 @@ extern void cleanupPhysics(bool interactive);
 extern void keyPress(unsigned char key, const PxTransform& camera);
 extern PxPhysics* gPhysics;
 extern PxMaterial* gMaterial;
+
+extern GameManager* gGame;
 
 std::vector<const RenderItem*> gRenderItems;
 
@@ -123,6 +128,10 @@ void renderCallback()
 	//	scene->getActors(PxActorTypeFlag::eRIGID_DYNAMIC | PxActorTypeFlag::eRIGID_STATIC, reinterpret_cast<PxActor**>(&actors[0]), nbActors);
 	//	renderActors(&actors[0], static_cast<PxU32>(actors.size()), true, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
 	//}
+
+	if (gGame) {
+		HUD::Draw(gGame->GetScore(), gGame->GetTimeLeft(), gGame->GetStateMessage());
+	}
 
 	finishRender();
 }

@@ -1,380 +1,295 @@
-#include <ctype.h>
-#include <PxPhysicsAPI.h>
-#include <vector>
-#include <memory>
-#include <iostream>
-#include <string>
-#include <algorithm> // remove_if
+#include <PxPhysics.h>
+
+#include "Sim/Particles/Emitter.h"
+#include "Sim/Particles/ProjectileManager.h"
+#include "Sim/Particles/ParticleSystem.h"
+#include "Sim/Particles/Forces/WindForce.h"
+#include "Sim/Particles/Forces/GravityForce.h"
+
+#include "Game/GameManager.h"
+#include "Game/DuckManager.h"
+#include "Game/HUD.h"
 
 #include "core.hpp"
 #include "RenderUtils.hpp"
 #include "callbacks.hpp"
 
-// Tus includes del sistema de partculas
-#include "Sim/Particles/ParticleSystem.h"
-#include "Sim/Particles/ProjectileManager.h"
-#include "Sim/Particles/Forces/GravityForce.h"
-#include "Sim/Particles/Forces/WindForce.h"
-#include "Sim/Particles/Forces/BuoyancyForceGenerator.h"
+#include <iostream>
+#include <memory>
+#include <cctype>
 
-using namespace physx;
+// -------------------------------------------------------------------------
+// VARIABLES GLOBALES
+// -------------------------------------------------------------------------
+physx::PxDefaultAllocator			gAllocator;
+physx::PxDefaultErrorCallback		gErrorCallback;
 
-// -----------------------------------------------------------------------
-// GLOBAL VARS
-// -----------------------------------------------------------------------
-PxDefaultAllocator         gAllocator;
-PxDefaultErrorCallback     gErrorCallback;
-PxFoundation* gFoundation = nullptr;
-PxPhysics* gPhysics = nullptr;
-PxDefaultCpuDispatcher* gDispatcher = nullptr;
-PxScene* gScene = nullptr;
-PxPvd* gPvd = nullptr;
-PxMaterial* gMaterial = nullptr;
-ContactReportCallback     gContactCB;
+physx::PxFoundation*				gFoundation		= NULL;
+physx::PxPhysics*					gPhysics		= NULL;
 
-std::string display_text = "Tiro al Pato 2.0: ESPACIO disparar | C lanzar pato | V viento";
+physx::PxMaterial*					gMaterial		= NULL;
 
-int gScore = 0;
-int gShots = 0;
+physx::PxPvd*						gPvd			= NULL;
 
+physx::PxDefaultCpuDispatcher*		gDispatcher		= NULL;
+physx::PxScene*						gScene			= NULL;
+ContactReportCallback				gContactCB;
 
-// --- GESTORES ---
-ProjectileManager   gProjManager; // Balas (Particulas custom)
-ParticleSystem      gParticleSys; // Sistema para efectos / fuerzas
+// Instancias globales
+GameManager* gGame = nullptr;
+DuckManager* gDucks = nullptr;
+ProjectileManager* gProj = nullptr;
 
-// --- FUERZAS ---
-// Punteros para gestin rpida en main
-std::unique_ptr<WindForce>    gWindForce;
-
-// --- PATOS (Slidos Rgidos) ---
-struct Duck {
-    PxRigidDynamic* body;
-    RenderItem* renderItem;
-    double life;
-    bool isDead;
-};
-std::vector<Duck*> gDucks;
-
-// --- AGUA (Visual) ---
+// Elementos visuales extra
 RenderItem* gWaterRenderItem = nullptr;
-float gWaterLevel = 0.0f;
 
-// -----------------------------------------------------------------------
-// CORRECCIN ERROR LNK2019
-// -----------------------------------------------------------------------
-// Esta funcin es llamada desde callbacks.cpp. Debe existir aunque est vaca.
-void onCollision(physx::PxActor* actor1, physx::PxActor* actor2)
-{
-    PX_UNUSED(actor1);
-    PX_UNUSED(actor2);
-    // Aqu ira lgica de colisin entre dos SOLIDOS de PhysX.
-    // Como mezclamos Partculas (Balas) y Slidos (Patos), 
-    // la lgica la hacemos manual en checkCollisions().
-}
+// Generadores de fuerza
+ParticleSystem* gParticleSys = nullptr;
+WindForce* gWindForce = nullptr;
+GravityForce* gGravityForce = nullptr;
 
-// -----------------------------------------------------------------------
-// HELPERS
-// -----------------------------------------------------------------------
+physx::PxTransform gWaterPose;
 
 
-static const char* ProjectileName(ProjectileKind k)
-{
-    switch (k) {
-    case ProjectileKind::CannonBall: return "CannonBall";
-    case ProjectileKind::TankShell:  return "TankShell";
-    case ProjectileKind::Pistol:     return "Pistol";
-    default:                         return "?";
-    }
-}
+// -------------------------------------------------------------------------
+// FUNCIONES AUXILIARES
+// -------------------------------------------------------------------------
 
-// Generador de Patos (Requisito: Generador de Slidos)
-void spawnDuck() {
-    if (!gPhysics || !gScene) return;
-
-    // Posicin aleatoria en un lateral
-    float x = -40.0f;
-    float y = 10.0f + (rand() % 10);
-    float z = (rand() % 40) - 20.0f;
-
-    // Velocidad hacia el otro lado
-    float vx = 15.0f + (rand() % 10);
-    float vy = 5.0f + (rand() % 5);
-
-    // PhysX Setup
-    PxTransform t(PxVec3(x, y, z));
-    PxRigidDynamic* body = gPhysics->createRigidDynamic(t);
-
-    // Forma (Caja)
-    PxShape* shape = gPhysics->createShape(PxBoxGeometry(1.0f, 0.5f, 0.8f), *gMaterial);
-    body->attachShape(*shape);
-
-    // Requisito: Masa e inercia calculadas con densidad
-    float density = 400.0f + (rand() % 200);
-    PxRigidBodyExt::updateMassAndInertia(*body, density);
-
-    body->setLinearVelocity(PxVec3(vx, vy, 0));
-    // Rotacin inicial para que se vea dinmico
-    body->setAngularVelocity(PxVec3(0, 1, 0));
-    body->setAngularDamping(0.5f);
-
-    gScene->addActor(*body);
-
-    // Visual
-    Vector4 color(1.0f, 0.8f, 0.2f, 1.0f); // Amarillo pato
-    RenderItem* item = new RenderItem(shape, body, color);
-
-    Duck* d = new Duck();
-    d->body = body;
-    d->renderItem = item;
-    d->life = 15.0; // 15 segs de vida
-    d->isDead = false;
-
-    gDucks.push_back(d);
-    shape->release();
-}
-
-// Lgica de colisin manual: Partcula vs Slido Rgido
+// Comprobación de colisiones: balas (partículas) vs patos (sólidos)
 void checkCollisions() {
-    // Obtenemos las partculas activas gracias al getter nuevo
-    const auto& particles = gProjManager.GetParticles();
+	if (!gDucks || !gProj || !gGame) return;
 
-    for (auto* duck : gDucks) {
-        if (duck->isDead || !duck->body) continue;
+	// Obtenemos las listas
+	const auto& ducks = gDucks->GetDucks();
+	const auto& particles = gProj->GetParticles();
 
-        PxTransform duckPose = duck->body->getGlobalPose();
-        Vector3D duckPos(duckPose.p.x, duckPose.p.y, duckPose.p.z);
+	for (auto& duck : ducks) {
+		if (duck->isDead) continue;
 
-        // Asumimos que el pato tiene un radio de colisin aprox de 1.5 unidades
-        float duckRadius = 1.5f;
+		physx::PxTransform t = duck->body->getGlobalPose();
+		Vector3D duckPos(t.p.x, t.p.y, t.p.z);
+		float duckRadius = 1.5f;
 
-        for (auto& p : particles) {
-            if (!p || !p->IsAlive()) continue; // Si la bala ya no existe
+		for (const auto& p : particles) {
+			if (!p || !p->IsAlive()) continue;
 
-            Vector3D bulletPos = p->GetPosition();
-            Vector3D distVec = duckPos - bulletPos;
+			Vector3D diff = p->GetPosition() - duckPos;
+			float distSq = diff.getX() * diff.getX() + 
+				diff.getY() * diff.getY() + diff.getZ() * diff.getZ();
 
-            if (distVec.length() < duckRadius) {
-                // --- IMPACTO DETECTADO ---
+			if (distSq < (duckRadius * duckRadius)) {
+				// IMPACTO
+				duck->isDead = true;
+				gGame->OnDuckHit();
 
-                // 1. Matar al pato
-                duck->isDead = true;
-                ++gScore;
-                duck->life = 0.5; // deja el pato un instante en pantalla y luego se limpia
-                duck->renderItem->color = Vector4(1.0f, 0.0f, 0.0f, 1.0f); // Se vuelve ROJO al morir
+				// Feedback físico: empujar elpato con la velocidad de la bala
+				Vector3D v = p->GetVelocity();
+				duck->body->addForce(physx::PxVec3(v.getX(), v.getY(), v.getZ()) * 10.0f);
+				duck->body->setAngularVelocity(physx::PxVec3(5, 5, 5)); // girar al morir
 
-                // 2. Efecto fsico en el pato (le damos un golpe fuerte)
-                Vector3D velBala = p->GetVelocity();
-                PxVec3 force(velBala.getX(), velBala.getY(), velBala.getZ());
-                duck->body->addForce(force * 50.0f); // Multiplicador de fuerza
-                duck->body->setAngularVelocity(PxVec3(10, 10, 0)); // Girar loco
+				// Feedback consola
+				std::cout << "Pato cazado! Score: " << gGame->GetScore() << std::endl;
 
-                // 3. Matar la bala (hack: le ponemos vida negativa)
-                // OJO: Particle no tiene setLife pblico en tu cdigo original, 
-                // pero suele borrarse si se sale del mundo o timer.
-                // Como workaround, la mandamos al inframundo para que se borre sola:
-                // Si pudieras editar Particle.h aadiras: void Kill() { _life = -1; }
-                // Como no quiero hacerte editar ms ficheros, asumimos que sigue su curso o rebota.
-                // Pero visualmente ya hemos dado al pato.
-
-                break; // Una bala solo mata un pato a la vez
-            }
-        }
-    }
+				break; // solo un pato muere por frame
+			}
+		}
+	}
 }
 
-// Lgica de flotacin simple para cumplir requisito
-void applyBuoyancyToDucks(double dt) {
-    for (auto* duck : gDucks) {
-        if (!duck->body) continue;
+// -------------------------------------------------------------------------
+// CORE
+// -------------------------------------------------------------------------
 
-        PxTransform t = duck->body->getGlobalPose();
-        if (t.p.y < gWaterLevel) {
-            float depth = gWaterLevel - t.p.y;
-            // Fuerza hacia arriba (Empuje)
-            float forceY = (depth * 150.0f) + 10.0f;
+void initPhysics(bool interactive) {
+	PX_UNUSED(interactive);
 
-            // Friccin del agua (Drag)
-            PxVec3 vel = duck->body->getLinearVelocity();
-            PxVec3 drag = -vel * 2.0f;
+	gFoundation = PxCreateFoundation(PX_FOUNDATION_VERSION, gAllocator, gErrorCallback);
 
-            duck->body->addForce(PxVec3(0, forceY, 0) + drag);
-        }
-    }
+	gPvd = PxCreatePvd(*gFoundation);
+	physx::PxPvdTransport* transport = physx::PxDefaultPvdSocketTransportCreate(PVD_HOST, 5425, 10);
+	gPvd->connect(*transport, physx::PxPvdInstrumentationFlag::eALL);
+
+	gPhysics = PxCreatePhysics(PX_PHYSICS_VERSION, *gFoundation, 
+		physx::PxTolerancesScale(), true, gPvd);
+
+	// Material por defecto
+	gMaterial = gPhysics->createMaterial(0.5f, 0.5f, 0.6f);
+
+	// Para sólido rígidos
+	physx::PxSceneDesc sceneDesc(gPhysics->getTolerancesScale());
+	sceneDesc.gravity = physx::PxVec3(0.0f, -9.8f, 0.0f);
+	gDispatcher = physx::PxDefaultCpuDispatcherCreate(2);
+	sceneDesc.cpuDispatcher = gDispatcher;
+	sceneDesc.filterShader = contactReportFilterShader;
+	sceneDesc.simulationEventCallback = &gContactCB;
+	gScene = gPhysics->createScene(sceneDesc);
+
+	// --- ESCENARIO ---
+	// Agua visual (plano grande azul transparente)
+	physx::PxShape* waterShape = 
+		gPhysics->createShape(physx::PxBoxGeometry(100.0f, 0.1f, 50.0f), *gMaterial);
+	gWaterPose.p = physx::PxVec3(0, -0.2f, 0);
+	gWaterRenderItem = new RenderItem(waterShape, &gWaterPose, Vector4(0.0f, 0.2f, 1.0f, 0.6f));
+	waterShape->release();
+
+
+	// --- MANAGERS ---
+	gGame = new GameManager();
+	gDucks = new DuckManager(gPhysics, gScene);
+	gProj = new ProjectileManager();
+
+	// Sistema de partículas
+	gParticleSys = new ParticleSystem();
+
+	// Límites para limpiar por espacio
+	gParticleSys->SetBounds(AABB{ Vector3D{-200, -50,-200}, Vector3D{200, 200, 200} });
+
+	// Dos emisores distintos (VISIBLES)
+	auto mist = std::make_unique<BoxEmitter>(
+		AABB{ Vector3D{-100, -0.1f, -40}, Vector3D{100, 0.2, 40} }, // alrededor del agua
+		500.0f, // rate
+		0.8f, 0.4f, // speed mean/std
+		2.0, // life
+		0.125f, // radius
+		Vector4(0.05f, 0.05f, 1.0f, 1.0f) // color
+	);
+	mist->SetGravity(Vector3D{ 0, 0.0f, 0 });
+	gParticleSys->AddEmitter(std::move(mist));
+
+	auto sparks1 = std::make_unique<PointEmitter>(
+		Vector3D{-100, 20, -25 },		// un punto visible en escena
+		Vector3D{1, 0.2f, 0},		// dirección base
+		250.0f, 12.0f, 4.0f,		// rate, speed mean/std
+		1.2, 0.125f,
+		Vector4(0.05f, 0.05f, 1.0f, 1.0f)
+	);
+	sparks1->SetCone(0.6f);
+	sparks1->SetPositionJitter(Vector3D{ 0.5f, 0.2f, 0.5f });
+	gParticleSys->AddEmitter(std::move(sparks1));
+
+	auto sparks2 = std::make_unique<PointEmitter>(
+		Vector3D{ -100, 20, 25 },		// un punto visible en escena
+		Vector3D{ 1, 0.2f, 0 },		// dirección base
+		250.0f, 12.0f, 4.0f,		// rate, speed mean/std
+		1.2, 0.125f,
+		Vector4(0.05f, 0.05f, 1.0f, 1.0f)
+	);
+	sparks2->SetCone(0.6f);
+	sparks2->SetPositionJitter(Vector3D{ 0.5f, 0.2f, 0.5f });
+	gParticleSys->AddEmitter(std::move(sparks2));
+
+	// Gravedad (fuerza constante)
+	auto gravity = std::make_unique<GravityForce>(Vector3D(0, -9.8f, 0));
+	gGravityForce = gravity.get();
+	gParticleSys->AddForceGenerator(std::move(gravity));
+
+	// Viento (fuerza variable)
+	auto wind = std::make_unique<WindForce>(Vector3D(10.0f, 0.0f, 0.0f), 1.0f, 0.1f);
+	gWindForce = wind.get();
+	gParticleSys->AddForceGenerator(std::move(wind));
 }
 
-// -----------------------------------------------------------------------
-// CORE FUNCTIONS
-// -----------------------------------------------------------------------
+void stepPhysics(bool interactive, double dt) {
+	PX_UNUSED(interactive);
 
-void initPhysics(bool interactive)
-{
-    PX_UNUSED(interactive);
+	// Simulación física
+	gScene->simulate(dt);
+	gScene->fetchResults(true);
 
-    gFoundation = PxCreateFoundation(PX_FOUNDATION_VERSION, gAllocator, gErrorCallback);
-    gPvd = PxCreatePvd(*gFoundation);
-    PxPvdTransport* transport = PxDefaultPvdSocketTransportCreate(PVD_HOST, 5425, 10);
-    gPvd->connect(*transport, PxPvdInstrumentationFlag::eALL);
-    gPhysics = PxCreatePhysics(PX_PHYSICS_VERSION, *gFoundation, PxTolerancesScale(), true, gPvd);
-    gMaterial = gPhysics->createMaterial(0.5f, 0.5f, 0.1f);
+	// Lógica de juego
+	if (gGame) {
+		gGame->Update(dt);
 
-    PxSceneDesc desc(gPhysics->getTolerancesScale());
-    desc.gravity = PxVec3(0.0f, -9.81f, 0.0f);
-    gDispatcher = PxDefaultCpuDispatcherCreate(2);
-    desc.cpuDispatcher = gDispatcher;
-    desc.filterShader = PxDefaultSimulationFilterShader;
-    desc.simulationEventCallback = &gContactCB;
-    gScene = gPhysics->createScene(desc);
+		if (gGame->GetState() == GameState::PLAYING) {
+			if (gParticleSys) gParticleSys->Update(dt);
+			// Actualizar managers específicos
+			if (gDucks) {
+				gDucks->Update(dt, gWaterPose.p.y);
 
-    // --- ESCENARIO ---
+				if (gWindForce) {
+					for (auto& duck : gDucks->GetDucks()) {
+						if (!duck->isDead && duck->body) {
+							gWindForce->Apply(duck->body, dt);
+						}
+					}
+				}
+			}
 
-    // Agua (Visual)
-    PxShape* waterShape = gPhysics->createShape(PxBoxGeometry(100.0f, 0.1f, 50.0f), *gMaterial);
-    PxTransform waterPose(PxVec3(0, gWaterLevel, 0));
-    gWaterRenderItem = new RenderItem(waterShape, &waterPose, Vector4(0.0f, 0.2f, 1.0f, 0.6f));
+			if (gProj) gProj->Update(dt);
 
-    // Fuerza Viento
-    // Lo instanciamos y lo guardamos. Usamos unique_ptr.
-    gWindForce = std::make_unique<WindForce>(Vector3D(10.0f, 0.0f, 0.0f), 1.0f, 0.1f);
-
-    // Aadir copia del viento al sistema de partculas para que afecte a BALAS
-    // (Ojo: ParticleSystem usa unique_ptr, as que creamos OTRO objeto igual)
-    gParticleSys.AddForceGenerator(std::make_unique<WindForce>(Vector3D(10.0f, 0.0f, 0.0f), 1.0f, 0.1f));
-
-    // Configura proyectil inicial (IMPORTANTE: inicializar TODOS los campos)
-    // Si no, _life/_damping/_color quedan basura y la bala puede desaparecer al instante.
-    ProjectileDesc canon = gProjManager.GetPreset(ProjectileKind::CannonBall);
-    canon._mReal   = 2.0f;
-    canon._vReal   = 100.0f;
-    canon._vSim    = 100.0f;
-    canon._gSim    = -9.8f;
-    canon._radius  = 0.5f;
-    canon._color   = Vector4(0.9f, 0.9f, 0.2f, 1.0f);
-    canon._life    = 6.0;
-    canon._damping = 0.995f;
-    gProjManager.SetPreset(ProjectileKind::CannonBall, canon);
-
+			// Colisiones
+			checkCollisions();
+		}
+	}
 }
 
-void stepPhysics(bool interactive, double dt)
-{
-    PX_UNUSED(interactive);
+void cleanupPhysics(bool interactive) {
+	PX_UNUSED(interactive);
 
-    // Spawn automtico de patos
-    static double timer = 0.0;
-    timer += dt;
-    if (timer > 2.0) {
-        spawnDuck();
-        timer = 0.0;
-    }
+	// Limpiar managers
+	delete gGame;
+	delete gDucks; // su destructor limpia los patos
+	if (gProj) { gProj->Clear(); delete gProj; }
 
-    // Aplicar fuerzas a Patos (PhysX) y a Balas (Partículas)
-    if (gWindForce && gWindForce->Enabled()) {
-        // Requisito: Fuerza sobre Sólido Rígido
-        for (auto* d : gDucks) {
-            gWindForce->Apply(d->body, dt);
-        }
+	// Limpiar escenario
+	if (gWaterRenderItem) gWaterRenderItem->release();
 
-        // Extra: el mismo viento afecta a las balas (partículas)
-        const auto& bullets = gProjManager.GetParticles();
-        for (auto& b : bullets) {
-            if (b) gWindForce->Apply(*b, dt);
-        }
-    }
+	// Limpiar generador de partículas
+	if (gParticleSys) { delete gParticleSys; gParticleSys = nullptr; }
 
-applyBuoyancyToDucks(dt); // Requisito: Flotacin
+	// Limpiar PhysX
+	gScene->release();
+	gDispatcher->release();
+	gPhysics->release();
 
-    // Simular PhysX
-    gScene->simulate(dt);
-    gScene->fetchResults(true);
+	if (gPvd) {
+		physx::PxPvdTransport* transport = gPvd->getTransport();
+		gPvd->release();
+		transport->release();
+	}
 
-    // Update Sistemas propios
-    gProjManager.Update(dt);
-    gParticleSys.Update(dt);
-
-    // Comprobar colisiones (La magia que conecta ambos mundos)
-    checkCollisions();
-
-    // Limpieza de Patos muertos o viejos
-    auto it = gDucks.begin();
-    while (it != gDucks.end()) {
-        Duck* d = *it;
-        d->life -= dt;
-
-        // Si se acaba la vida o cae muy profundo
-        if (d->life <= 0 || d->body->getGlobalPose().p.y < -20.0f) {
-            d->renderItem->release(); // Borrar visual
-            d->body->release();       // Borrar fsica
-            delete d;                 // Borrar struct
-            it = gDucks.erase(it);
-        }
-        else {
-            ++it;
-        }
-    }
-
-    // HUD / Texto en pantalla
-    display_text =
-        std::string("Tiro al Pato 2.0 | Score: ") + std::to_string(gScore) +
-        " | Shots: " + std::to_string(gShots) +
-        " | Ducks: " + std::to_string(gDucks.size()) +
-        " | Proj: " + ProjectileName(gProjManager.Current()) +
-        " | Wind: " + (gWindForce && gWindForce->Enabled() ? "ON" : "OFF") +
-        " | [ESPACIO] disparar  [Q/E] tipo  [C] pato  [V] viento";
-
-
+	gFoundation->release();
 }
 
-void cleanupPhysics(bool interactive)
-{
-    PX_UNUSED(interactive);
-    gProjManager.Clear();
-    gParticleSys.Clear();
-
-    for (auto* d : gDucks) {
-        if (d->renderItem) d->renderItem->release();
-        if (d->body) d->body->release();
-        delete d;
-    }
-    gDucks.clear();
-
-    if (gWaterRenderItem) gWaterRenderItem->release();
-
-    gScene->release();
-    gDispatcher->release();
-    gPhysics->release();
-    if (gPvd) {
-        PxPvdTransport* t = gPvd->getTransport();
-        gPvd->release(); t->release();
-    }
-    gFoundation->release();
+void onCollision(physx::PxActor* actor1, physx::PxActor* actor2) {
+	PX_UNUSED(actor1);
+	PX_UNUSED(actor2);
 }
 
-void keyPress(unsigned char key, const PxTransform& camera)
-{
-    switch (toupper(key))
-    {
-    case ' ': gProjManager.Fire(); ++gShots; break;
-    case 'Q': gProjManager.Cycle(-1); break;
-    case 'E': gProjManager.Cycle(+1); break;
-    case 'C': spawnDuck(); break;
-    case 'V':
-        if (gWindForce) {
-            gWindForce->SetEnabled(!gWindForce->Enabled());
-            std::cout << "Viento: " << (gWindForce->Enabled() ? "ON" : "OFF") << std::endl;
-        }
-        break;
-    }
+void keyPress(unsigned char key, const physx::PxTransform& camera) {
+	if (!gGame) return;
+
+	switch (toupper(key)) {
+	case ' ':
+		if (gGame->GetState() == GameState::MENU) {
+			gGame->StartGame();
+		}
+		else if (gGame->GetState() == GameState::PLAYING) {
+			gProj->Fire();
+			gGame->OnShotFired();
+		}
+		break;
+	// Reiniciar en Game Over
+	case 'R':
+		if (gGame->GetState() == GameState::GAME_OVER) {
+			gGame->StartGame(); // reiniciar variables
+		}
+		break;
+	}
 }
 
-int main(int, const char* const*)
-{
+int main(int, const char* const*) {
 #ifndef OFFLINE_EXECUTION
-    extern void renderLoop();
-    renderLoop();
+	extern void renderLoop();
+	renderLoop();
 #else
-    initPhysics(false);
-    for (int i = 0; i < 600; ++i) stepPhysics(false, 0.016);
-    cleanupPhysics(false);
+	static const physx::PxU32 frameCount = 100;
+	initPhysics(false);
+	for (physx::PxU32 i = 0; < frameCount; i++) {
+		stepPhysics(false);
+	}
+	cleanupPhysics(false);
 #endif
-    return 0;
+
+	return 0;
 }

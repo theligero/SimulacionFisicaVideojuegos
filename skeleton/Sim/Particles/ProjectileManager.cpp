@@ -2,7 +2,7 @@
 
 ProjectileManager::ProjectileManager()
 {
-	_cannon = ProjectileDesc{ 5.0f, 250.f, 20.f, -2.0f, 0.20f, 
+	_cannon = ProjectileDesc{ 50.0f, 2250.f, 200.f, -2.0f, 0.20f, 
 		Vector4(0.9f, 0.9f, 0.2f, 1), 6.0, 0.995f };
 	_tank = ProjectileDesc{ 10.0f, 1800.f, 25.f, -0.8f, 0.22f,
 		Vector4(0.95f, 0.35f, 0.35f, 1), 6.0, 0.997f };

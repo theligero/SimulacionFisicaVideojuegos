@@ -14,6 +14,7 @@ public:
 	void SetGravity(const Vector3D& g);
 
 	void Apply(Particle& p, double dt) override;
+	void Apply(physx::PxRigidDynamic* rb, double dt) override;
 };
 
 #endif // GRAVITY_FORCE_H_
